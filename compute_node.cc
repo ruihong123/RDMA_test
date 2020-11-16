@@ -135,6 +135,6 @@ int main()
   double latency = ((double) (max-min)) / (thread_num * iteration);
   std::cout << (max-min) << std::endl;
   std::cout << "Size: " << Chunk_size << "Bandwidth is " << bandwidth << "MB/s" << std::endl;
-  std::cout << "Size: " << Chunk_size << "latency is " << latency << "ns" << std::endl;
+  std::cout << "Size: " << Chunk_size << "Dummy latency is " << latency << "ns" << std::endl;
   return 0;
 }
