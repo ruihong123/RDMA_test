@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.5)
+project(RDMA_test)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wextra -Wall -pthread")
+set(CMAKE_CXX_STANDARD 17)
+include_directories($(PROJECT_SOURCE_DIR))
+add_executable(RDMA_test compute_node.cc rdma.cc)
+#target_link_libraries(RDMA ibverbs)
+target_link_libraries(RDMA_test ibverbs)
