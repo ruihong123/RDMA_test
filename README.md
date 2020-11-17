@@ -6,5 +6,5 @@ For read or write, 0 represent read, others represent write.
 ## Use CMAKE to compile the file.
 mkdir build<br>
 cd build<br>
-cmake ..<br>
+cmake -DCMAKE_BUILD_TYPE=Release ..<br>
 make RDMA_test_server RDMA_test_client
