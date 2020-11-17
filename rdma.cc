@@ -453,6 +453,7 @@ void RDMA_Manager::Client_Set_Up_Resources() {
   // int trans_times;
   char temp_char;
   std::string ip_add;
+  std::cout << "Input server IP address:\n";
   std::cin >> ip_add;
   rdma_config.server_name = ip_add.c_str();
   /* if client side */
@@ -1458,7 +1459,7 @@ void RDMA_Manager::Allocate_Remote_RDMA_Slot(const std::string& file_name,
       static_cast<char*>(sst_meta->mr->addr) + sst_index * Table_Size);
   sst_meta->mr->length = Table_Size;
   sst_meta->fname = file_name;
-  sst_meta->map_pointer = ptr->first;
+  sst_meta->map_pointer = mr_last;
   return;
 }
 // A function try to allocat
@@ -1532,7 +1533,7 @@ void RDMA_Manager::Allocate_Local_RDMA_Slot(ibv_mr*& mr_input,
       if (Read_Local_Mem_Bitmap->empty()) {
         ibv_mr* mr;
         char* buff;
-        Local_Memory_Register(&buff, &mr, 1024*256*chunk_size, chunk_size);
+        Local_Memory_Register(&buff, &mr, 256*chunk_size, chunk_size);
       }
       mem_write_lock.unlock();
     }
@@ -1562,11 +1563,11 @@ void RDMA_Manager::Allocate_Local_RDMA_Slot(ibv_mr*& mr_input,
     // pick up one buffer from the new Local memory region.
     // TODO:: It could happen that the local buffer size is not enough, need to reallocate a new buff again,
     // TODO:: Because there are two many thread going on at the same time.
-    ibv_mr* mr_to_allocate = new ibv_mr();
-    char* buff = new char[chunk_size];
+    ibv_mr* mr_to_allocate;
+    char* buff;
 
     std::unique_lock<std::shared_mutex> mem_write_lock(local_mem_create_mutex);
-    Local_Memory_Register(&buff, &mr_to_allocate, chunk_size*512, chunk_size);
+    Local_Memory_Register(&buff, &mr_to_allocate, chunk_size*50, chunk_size);
     int block_index = Read_Local_Mem_Bitmap->at(mr_to_allocate).allocate_memory_slot();
     mem_write_lock.unlock();
 

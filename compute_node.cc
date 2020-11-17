@@ -3,20 +3,28 @@
 #include <thread>
 #include "rdma.h"
 
-void client_thread(RDMA_Manager *rdma_manager, long int &start, long int &end, int iteration, ibv_mr** local_mr_pointer,
-                   SST_Metadata** sst_meta, std::string *thread_id, size_t msg_size) {
+void client_thread(RDMA_Manager *rdma_manager, long int &start, long int &end, int iteration, ibv_mr **local_mr_pointer,
+                   SST_Metadata **sst_meta, std::string *thread_id, size_t msg_size, int r_w) {
 
 //    usleep(100);
 //printf("thread_id: %s \n", thread_id->c_str());
   start = std::chrono::high_resolution_clock::now().time_since_epoch().count();
   for (int i = 0; i<iteration; i++){
-      if ((i+1)%1000 == 0){
-          int j = (i+1)%1000;
-          rdma_manager->RDMA_Write(sst_meta[j]->mr, local_mr_pointer[j],
-                                   msg_size, *thread_id, IBV_SEND_SIGNALED, 1000);
+      if ((i+1)%10 == 0){
+          int j = (i+1)%10;
+          if (r_w)
+            rdma_manager->RDMA_Write(sst_meta[j]->mr, local_mr_pointer[j],
+                                   msg_size, *thread_id, IBV_SEND_SIGNALED, 1);
+          else
+              rdma_manager->RDMA_Read(sst_meta[j]->mr, local_mr_pointer[j],
+                                       msg_size, *thread_id, IBV_SEND_SIGNALED, 1);
       }else{
-          rdma_manager->RDMA_Write(sst_meta[0]->mr, local_mr_pointer[0],
-                                   msg_size, *thread_id, IBV_SEND_SIGNALED, 0);
+          if (r_w)
+            rdma_manager->RDMA_Write(sst_meta[0]->mr, local_mr_pointer[0],
+                                   msg_size, *thread_id, IBV_SEND_SIGNALED, 1);
+          else
+              rdma_manager->RDMA_Read(sst_meta[0]->mr, local_mr_pointer[0],
+                                       msg_size, *thread_id, IBV_SEND_SIGNALED, 1);
       }
 
   }
@@ -64,18 +72,33 @@ int main()
   auto Remote_Bitmap = new std::unordered_map<ibv_mr*, In_Use_Array>;
   auto Read_Bitmap = new std::unordered_map<ibv_mr*, In_Use_Array>;
   auto Write_Bitmap = new std::unordered_map<ibv_mr*, In_Use_Array>;
+
   size_t read_block_size = 4*1024;
-  size_t write_block_size = 1*1024*1024;
-  size_t table_size = 8*1024*1024;
+  size_t write_block_size = 64;
+  size_t table_size = 2*1024*1024;
+  std::cout << "block size:\r" << std::endl;
+  std::cin >> read_block_size;
+//  table_size = read_block_size+64;
+    int readorwrite;
+    std::cout << "Read or write:\r" << std::endl;//read 0 write anything else
+    std::cin >> readorwrite;
+    size_t thread_num = 1;
+    std::cout << "thread num:\r" << std::endl;
+    std::cin >> thread_num;
   RDMA_Manager* rdma_manager = new RDMA_Manager(config, Remote_Bitmap, Write_Bitmap, Read_Bitmap,
                              table_size, write_block_size, read_block_size);//  RDMA_Manager rdma_manager(config, Remote_Bitmap, Local_Bitmap);
   rdma_manager->Client_Set_Up_Resources();
   size_t Chunk_size = rdma_manager->Read_Block_Size;
-  size_t thread_num = 1;
-  ibv_mr* RDMA_mem_chunks[thread_num][1000];
-  ibv_mr* RDMA_map[thread_num][1000];
-  SST_Metadata* meta_data[thread_num][1000];
-    int iteration = 1000000;
+
+
+  ibv_mr* RDMA_mem_chunks[thread_num][10];
+  ibv_mr* RDMA_map[thread_num][10];
+  SST_Metadata* meta_data[thread_num][10];
+  int iteration;
+  if (read_block_size >= 100*1024)
+    iteration = 10000;
+  else
+      iteration = 1000000;
 //    long int dummy1;
 //    long int dummy2;
 //    auto start = std::chrono::high_resolution_clock::now();
@@ -96,7 +119,7 @@ int main()
 //        SST_Metadata* sst_meta;
         name[i] = std::to_string(i);
         rdma_manager->Remote_Query_Pair_Connection(name[i]);
-        for(size_t j= 0; j< thread_num; j++){
+        for(size_t j= 0; j< 1; j++){
             rdma_manager->Allocate_Remote_RDMA_Slot(name[i], meta_data[i][j]);
 
             rdma_manager->Allocate_Local_RDMA_Slot(RDMA_mem_chunks[i][j], RDMA_map[i][j], std::string("read"));
@@ -107,13 +130,13 @@ int main()
     }
   for (size_t i = 0; i < thread_num; i++){
 //      std::string name = std::to_string(i);
-      thread_object[i] = std::thread(client_thread, rdma_manager, std::ref(starts[i]), std::ref(ends[i]), iteration, RDMA_mem_chunks[i],
-                                     meta_data[i], &(name[i]), Chunk_size);
+      thread_object[i] = std::thread(client_thread, rdma_manager, std::ref(starts[i]), std::ref(ends[i]), iteration,
+                                     RDMA_mem_chunks[i], meta_data[i], &(name[i]), Chunk_size, readorwrite);
 //      for (auto s = 0; s<1000; s++);// spin for some time
 //      thread_object[i].detach();
   }
-//    client_thread(rdma_manager, std::ref(starts[1]), std::ref(ends[1]), iteration, mr_pointer_array[1],
-//                  meta_data_array[1], std::to_string(1), Chunk_size);
+//    client_thread(rdma_manager, std::ref(starts[0]), std::ref(ends[0]), iteration,
+//                  RDMA_mem_chunks[0], meta_data[0], &(name[0]), Chunk_size, readorwrite);
   for (size_t i = 0; i < thread_num; i++){
       thread_object[i].join();
   }
