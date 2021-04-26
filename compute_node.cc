@@ -14,17 +14,17 @@ void client_thread(RDMA_Manager *rdma_manager, long int &start, long int &end, i
           int j = (i+1)%10;
           if (r_w)
             rdma_manager->RDMA_Write(sst_meta[j]->mr, local_mr_pointer[j],
-                                   msg_size, *thread_id, IBV_SEND_SIGNALED, 1);
+                                   msg_size, *thread_id, IBV_SEND_SIGNALED, 0);
           else
               rdma_manager->RDMA_Read(sst_meta[j]->mr, local_mr_pointer[j],
-                                       msg_size, *thread_id, IBV_SEND_SIGNALED, 1);
+                                       msg_size, *thread_id, IBV_SEND_SIGNALED, 0);
       }else{
           if (r_w)
             rdma_manager->RDMA_Write(sst_meta[0]->mr, local_mr_pointer[0],
-                                   msg_size, *thread_id, IBV_SEND_SIGNALED, 1);
+                                   msg_size, *thread_id, IBV_SEND_SIGNALED, 10);
           else
               rdma_manager->RDMA_Read(sst_meta[0]->mr, local_mr_pointer[0],
-                                       msg_size, *thread_id, IBV_SEND_SIGNALED, 1);
+                                       msg_size, *thread_id, IBV_SEND_SIGNALED, 10);
       }
 
   }
